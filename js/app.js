@@ -56,13 +56,14 @@ addEventListener('input',e=>{
  if(e.target.id==='repo-map-search'){filterRepoMaps(e.target.value);return}
  if(e.target.id==='custom-map-search'){filterCustomMaps(e.target.value);return}
  const setting=e.target.dataset&&e.target.dataset.setting;
- if(setting){gameSettings[setting]=setting==='backgroundColor'?e.target.value:Number(e.target.value);if(setting==='music'){mv=gameSettings.music/100;if(audio)audio.volume=mv}else if(setting==='sfx')sv=gameSettings.sfx/100;const output=e.target.parentElement.querySelector('output');if(output)output.textContent=`${gameSettings[setting]}%`;saveGameSettings();return}
+ if(setting){gameSettings[setting]=e.target.type==='checkbox'?e.target.checked:setting==='backgroundColor'?e.target.value:Number(e.target.value);if(setting==='music'){mv=gameSettings.music/100;if(audio)audio.volume=mv}else if(setting==='sfx')sv=gameSettings.sfx/100;const output=e.target.parentElement.querySelector('output');if(output)output.textContent=`${gameSettings[setting]}%`;saveGameSettings();return}
  const k=e.target.dataset&&e.target.dataset.k;if(!k)return;const v=e.target.value/100;if(k==='mv'){mv=v;if(audio)audio.volume=v}else sv=v
 });
 addEventListener('change',e=>{
  if(e.target.id==='repo-map-sort'){filterRepoMaps();return}
  if(e.target.id==='custom-map-sort'){filterCustomMaps();return}
  if(e.target.dataset&&e.target.dataset.setting==='xboxFaceLayout'){gameSettings.xboxFaceLayout=e.target.checked;saveGameSettings()}
+ if(e.target.dataset&&e.target.dataset.setting==='forceVideoBackground'){gameSettings.forceVideoBackground=e.target.checked;saveGameSettings()}
  if(e.target.dataset&&e.target.dataset.k==='sv'){ac();snd(0)}
 });
 addEventListener('keydown',e=>{if(e.key==='Escape'){if(MAP_KEYBOARD)closeMapKeyboard();else if(MAP_SORT_OPEN)closeMapSort();else if(MAP_FULLSCREEN)closeMapFullscreen();else if(st==='play')pause();else if(st==='pause')resume()}if(e.key==='[')OFF-=.01;if(e.key===']')OFF+=.01});
@@ -150,9 +151,11 @@ function draw(t,now){const w=Math.round(innerWidth*devicePixelRatio),h=Math.roun
  const rk=st==='lose'?Math.min(1,(now-loseT)/700):0,mx2=(a,c)=>{const q=s=>[1,3,5].map(i=>parseInt(s.slice(i,i+2),16)),u=q(a),v=q(c);return'rgb('+u.map((w,i)=>Math.round(w+(v[i]-w)*rk)).join()+')'};
  const theme=gameSettings.backgroundColor,deep=blendHex(theme,'#000000',.72),bright=blendHex(theme,'#ffffff',.2);
  let g=X.createLinearGradient(0,0,1920,0);[[0,deep,'#2b0007'],[.17,theme,'#e0182f'],[.5,bright,'#ff3b4e'],[.83,theme,'#e0182f'],[1,deep,'#2b0007']].forEach(a=>g.addColorStop(a[0],mx2(a[1],a[2])));
- X.fillStyle=g;X.fillRect(-3000,-3000,8000,8000);if(CUST&&st!=='menu')drawVid(gameSettings.videoOpacity/100);
- X.globalAlpha=.07;X.strokeStyle='#000';X.lineWidth=2;for(let y=(now/30)%110-110;y<1100;y+=110){X.beginPath();X.moveTo(0,y);X.lineTo(1920,y);X.stroke()}
- g=X.createLinearGradient(0,640,0,1080);g.addColorStop(0,'rgba(0,30,20,0)');g.addColorStop(1,'rgba(0,30,20,.65)');X.globalAlpha=1;X.fillStyle=g;X.fillRect(-3000,640,8000,600);
+ X.fillStyle=g;X.fillRect(-3000,-3000,8000,8000);if(CUST&&st!=='menu')drawVid(gameSettings.forceVideoBackground?1:gameSettings.videoOpacity/100);
+ if(!gameSettings.forceVideoBackground){
+  X.globalAlpha=.07;X.strokeStyle='#000';X.lineWidth=2;for(let y=(now/30)%110-110;y<1100;y+=110){X.beginPath();X.moveTo(0,y);X.lineTo(1920,y);X.stroke()}
+  g=X.createLinearGradient(0,640,0,1080);g.addColorStop(0,'rgba(0,30,20,0)');g.addColorStop(1,'rgba(0,30,20,.65)');X.globalAlpha=1;X.fillStyle=g;X.fillRect(-3000,640,8000,600);
+ }
  fl=Math.max(0,fl-.04);X.globalAlpha=fl*.18;X.fillStyle='#fff';X.fillRect(-3000,-3000,8000,8000);
  MENU_GLOW=Math.max(0,MENU_GLOW-.035);
  const pl=st==='play'||st==='pause',n=pl&&p<N.length?N[p]:null;
@@ -187,7 +190,7 @@ show('main');addEventListener('load',()=>requestAnimationFrame(loop));
 
 const AUDIO = 'assets/main-theme.mp3';
 const SETTINGS_KEY='roller-game-settings';
-const gameSettings={music:80,sfx:70,backgroundColor:'#0fffbb',videoOpacity:35,layoutScale:100,xboxFaceLayout:true};
+const gameSettings={music:80,sfx:70,backgroundColor:'#0fffbb',videoOpacity:35,forceVideoBackground:false,layoutScale:100,xboxFaceLayout:true};
 try{
  const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');
  if(saved&&typeof saved==='object'){
@@ -195,6 +198,7 @@ try{
   if(Number.isFinite(saved.sfx))gameSettings.sfx=Math.max(0,Math.min(100,saved.sfx));
   if(typeof saved.backgroundColor==='string'&&/^#[0-9a-f]{6}$/i.test(saved.backgroundColor))gameSettings.backgroundColor=saved.backgroundColor;
   if(Number.isFinite(saved.videoOpacity))gameSettings.videoOpacity=Math.max(0,Math.min(100,saved.videoOpacity));
+  if(typeof saved.forceVideoBackground==='boolean')gameSettings.forceVideoBackground=saved.forceVideoBackground;
   if(Number.isFinite(saved.layoutScale))gameSettings.layoutScale=Math.max(70,Math.min(130,saved.layoutScale));
   if(typeof saved.xboxFaceLayout==='boolean')gameSettings.xboxFaceLayout=saved.xboxFaceLayout;
  }
@@ -211,6 +215,7 @@ function settingsScreen(){
    <label>SOUND EFFECTS <input type="range" min="0" max="100" value="${gameSettings.sfx}" data-setting="sfx"><output>${gameSettings.sfx}%</output></label>
    <label>BACKGROUND COLOR <input type="color" value="${gameSettings.backgroundColor}" data-setting="backgroundColor"></label>
    <label>VIDEO OPACITY <input type="range" min="0" max="100" value="${gameSettings.videoOpacity}" data-setting="videoOpacity"><output>${gameSettings.videoOpacity}%</output></label>
+   <label class="settings-check"><input type="checkbox" data-setting="forceVideoBackground"${gameSettings.forceVideoBackground?' checked':''}> Force natural video color (100% opacity, no tint)</label>
    <label>GAME BUTTON SIZE <input type="range" min="70" max="130" value="${gameSettings.layoutScale}" data-setting="layoutScale"><output>${gameSettings.layoutScale}%</output></label>
    <label class="settings-check"><input type="checkbox" data-setting="xboxFaceLayout"${gameSettings.xboxFaceLayout?' checked':''}> Keep face buttons in Xbox ABXY positions</label>
   </div>
@@ -220,7 +225,7 @@ let SETTINGS_RETURN='main',REPO_SELECTED=0;
 
 
 /* ===== CUSTOM MAPS: library (IndexedDB), import/export, video background, editor ===== */
-let CUST=null,VIDON=true,VID=null,EDIT=null,PM={},SELM=null,DRG=null,EDF=0,EDU=[],EDMSG='',EDMT=0;
+let CUST=null,VIDON=true,VID=null,VIDURL=null,EDIT=null,PM={},SELM=null,DRG=null,EDF=0,EDU=[],EDMSG='',EDMT=0,EDITOR_CLIPBOARD=[];
 const DIR8=['N','NE','E','SE','S','SW','W','NW'];
 const MARK_COLORS=['#123b8f','#0f766e','#7c3aed','#b45309','#be123c'];
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -241,6 +246,7 @@ const blobToURL=b=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=(
 const mkFile=(acc,fn)=>{const i=document.createElement('input');i.type='file';i.accept=acc;i.style.display='none';document.body.appendChild(i);i.onchange=()=>{const f=i.files[0];i.value='';if(f)fn(f)};return i};
 const FA=mkFile('audio/*,.mp3',f=>{PM.audio=f;showNew()});
 const FV=mkFile('video/mp4,.mp4',f=>{PM.video=f;showNew()});
+const FVR=mkFile('video/mp4,.mp4',f=>replaceEditorVideo(f));
 const FJ=mkFile('.json,application/json',f=>importFile(f));
 const REPO_MAPS_URL=new URL('../custume%20maps%20list/index.json',document.currentScript.src);
 let REPO_MAPS=[];
@@ -264,6 +270,7 @@ function MAPACT(a){
  if(a==='new'){PM={};showNew();return true}
  if(a==='pa'){FA.click();return true}
  if(a==='pv'){FV.click();return true}
+ if(a==='extractAudio'){extractMapAudio();return true}
  if(a==='create'){createMap();return true}
  if(a==='imp'){FJ.click();return true}
  if(a==='main'){show('main');return true}
@@ -493,12 +500,65 @@ async function showMaps(){let L=[];try{L=await listMaps()}catch(e){show('maps',`
   button.dataset.mapNotes=String(map.chart.length);
  });
  filterCustomMaps()}
-function showNew(){show('maps',`<h1>NEW MAP</h1><p>${PM.audio?'Music: '+esc(PM.audio.name):'Choose the MP3 for the music'}</p><p>${PM.video?'Background: '+esc(PM.video.name):'Optional: an MP4 for the background video'}</p>${B('pa','CHOOSE MP3',0,!PM.audio)}${B('pv','CHOOSE MP4 (OPTIONAL)',1)}${B('create','CREATE MAP',0,0)}${B('maps','BACK',1)}`)}
+function showNew(){show('maps',`<h1>NEW MAP</h1><p>${PM.audio?'Music: '+esc(PM.audio.name):'Choose the MP3 for the music'}</p><p>${PM.video?'Background: '+esc(PM.video.name):'Optional: an MP4 for the background video'}</p>${B('pa','CHOOSE MP3',0,!PM.audio)}${B('pv','CHOOSE MP4 (OPTIONAL)',1)}${PM.video?B('extractAudio',PM.audio?'USE AUDIO FROM MP4':'EXTRACT AUDIO FROM MP4',1):''}${B('create','CREATE MAP',0,0)}${B('maps','BACK',1)}`)}
 async function showOpts(){const r=await getMap(SELM);if(!r)return showMaps();
  show('maps',`<h1>${esc(r.name)}</h1><p>${r.chart.length} notes${r.video?' · background video '+(r.videoOn!==false?'on':'off'):''}</p>${B('mplay','PLAY MAP',0,1)}${B('mpreview','PREVIEW MAP',1)}${B('medit','EDIT MAP',1)}${r.video?B('vid',`BACKGROUND VIDEO: ${r.videoOn!==false?'ON':'OFF'}`,1):''}${B('mexp','EXPORT .JSON',1)}${B('mdel','DELETE MAP',1)}${B('maps','BACK',1)}`)}
-async function createMap(){if(!PM.audio){show('maps',`<h1>NEW MAP</h1><p>Choose an MP3 first.</p>${B('pa','CHOOSE MP3',0,1)}${B('maps','BACK',1)}`);return}
+async function createMap(){if(!PM.audio){show('maps',`<h1>NEW MAP</h1><p>Choose the MP3 first or extract audio from the selected MP4.</p>${B('pa','CHOOSE MP3',0,1)}${PM.video?B('extractAudio','EXTRACT AUDIO FROM MP4',1):''}${B('maps','BACK',1)}`);return}
  const r={id:uid(),name:(PM.audio.name.replace(/\.[^.]+$/,'')||'Untitled').slice(0,40),created:Date.now(),updated:Date.now(),chart:[],audio:PM.audio,video:PM.video||null,videoOn:true};
  await putMap(r);PM={};SELM=r.id;edOpen(r.id)}
+async function extractVideoAudio(file){
+ if(typeof MediaRecorder==='undefined')throw new Error('Audio extraction is not supported by this browser.');
+ const video=document.createElement('video'),url=URL.createObjectURL(file),chunks=[];
+ let recorder=null,context=null;
+ video.preload='auto';video.playsInline=true;
+ try{
+  await new Promise((resolve,reject)=>{
+   video.onloadedmetadata=resolve;video.onerror=()=>reject(new Error('The selected video could not be opened.'));
+   video.src=url;
+  });
+  if(!Number.isFinite(video.duration)||video.duration<=0)throw new Error('The selected video has no playable duration.');
+  let audioStream;
+  const AudioContextType=window.AudioContext||window.webkitAudioContext;
+  if(AudioContextType){
+   context=new AudioContextType();const source=context.createMediaElementSource(video),destination=context.createMediaStreamDestination();
+   source.connect(destination);audioStream=destination.stream;await context.resume();
+  }else{
+   const capture=video.captureStream||video.mozCaptureStream;
+   if(!capture)throw new Error('This browser cannot extract audio from video files.');
+   const tracks=capture.call(video).getAudioTracks();
+   if(!tracks.length)throw new Error('The selected video does not contain an audio track.');
+   audioStream=new MediaStream(tracks);
+  }
+  const mimeTypes=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/webm','audio/ogg'];
+  const mimeType=mimeTypes.find(type=>MediaRecorder.isTypeSupported(type));
+  recorder=mimeType?new MediaRecorder(audioStream,{mimeType}):new MediaRecorder(audioStream);
+  const result=new Promise((resolve,reject)=>{
+   recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data)};
+   recorder.onerror=()=>reject(new Error('Audio extraction failed while recording the video.'));
+   recorder.onstop=()=>resolve(new Blob(chunks,{type:recorder.mimeType||'audio/webm'}));
+  });
+  video.onended=()=>{if(recorder.state!=='inactive')recorder.stop()};
+  recorder.start();await video.play();
+  const blob=await result;
+  if(!blob.size)throw new Error('No audio could be extracted from the selected video.');
+  return blob;
+ }finally{
+  if(recorder&&recorder.state!=='inactive')recorder.stop();
+  video.pause();video.removeAttribute('src');video.load();URL.revokeObjectURL(url);
+  if(context)await context.close();
+ }
+}
+async function extractMapAudio(){
+ if(!PM.video)return;
+ show('maps',`<h1>EXTRACTING AUDIO</h1><p>Playing the video to extract its audio. This may take as long as the video.</p>`);
+ try{
+  const blob=await extractVideoAudio(PM.video),extension=blob.type.includes('ogg')?'ogg':blob.type.includes('mp4')?'m4a':'webm';
+  PM.audio=new File([blob],PM.video.name.replace(/\.[^.]+$/,'')+'.'+extension,{type:blob.type});
+  showNew();
+ }catch(error){
+  show('maps',`<h1>AUDIO EXTRACTION FAILED</h1><p>${esc(error.message)}</p>${B('extractAudio','TRY AGAIN',1,1)}${B('maps','BACK',1)}`);
+ }
+}
 async function deleteMap(){if(!SELM||!confirm('Delete this map?'))return;await delMap(SELM);SELM=null;showMaps()}
 async function toggleVid(){
  if(st==='pause'){VIDON=!VIDON;if(CUST&&CUST.rec&&!CUST.rec.remote){CUST.rec.videoOn=VIDON;await putMap(CUST.rec)}show('pause');return}
@@ -518,14 +578,16 @@ async function importFile(f){try{const d=JSON.parse(await f.text());
 async function playMap(preview=false){const r=await getMap(SELM);if(!r)return;
  CUST={rec:r,chart:r.chart.slice().sort((a,b)=>a[0]-b[0]),url:URL.createObjectURL(r.audio)};
  VIDON=r.videoOn!==false;setVid(r.video?URL.createObjectURL(r.video):null);start(preview)}
-function setVid(u){if(VID){VID.pause();VID.removeAttribute('src');VID.load()}VID=null;
+function setVid(u){if(VID){VID.pause();VID.removeAttribute('src');VID.load()}if(VIDURL)URL.revokeObjectURL(VIDURL);VID=null;VIDURL=u;
  if(u){VID=document.createElement('video');VID.muted=true;VID.loop=true;VID.playsInline=true;VID.src=u;VID.load()}}
 function vidSync(){if(!VID)return;const a=st==='edit'?(EDIT&&EDIT.audio):audio;
  if(!a||!VIDON||!(st==='play'||st==='pause'||st==='lose'||st==='end'||st==='edit')){if(!VID.paused)VID.pause();return}
- const playing=(st==='play'&&going)||(st==='edit'&&!a.paused);
+ const scrubbing=st==='edit'&&DRG&&DRG.m==='scrub';
+ const playing=(st==='play'&&going)||(st==='edit'&&(!a.paused||scrubbing));
  if(playing&&VID.paused)VID.play().catch(()=>{});
  if(!playing&&!VID.paused)VID.pause();
- if(Math.abs(VID.currentTime-a.currentTime)>.15){try{VID.currentTime=a.currentTime}catch(e){}}}
+ const target=scrubbing?EDIT.t:a.currentTime;
+ if(Math.abs(VID.currentTime-target)>.15){try{VID.currentTime=target}catch(e){}}}
 function drawVid(al){if(!VID||!VIDON||VID.readyState<2)return;const vw=VID.videoWidth,vh=VID.videoHeight;if(!vw||!vh)return;
  const s=Math.max(1920/vw,1080/vh),dw=vw*s,dh=vh*s;X.globalAlpha=al;X.drawImage(VID,(1920-dw)/2,(1080-dh)/2,dw,dh);X.globalAlpha=1}
 
@@ -538,10 +600,10 @@ function legalMsg(p){if(!hasInput(p))return'';
  if(p.rs>=0&&p.fm>0)return'Face buttons cannot be used with the right stick';
  return''}
 function edMsg(s){EDMSG=s;EDMT=performance.now()}
-function editorSnapshot(){return{chart:EDIT.chart.map(n=>({...n})),marks:EDIT.marks.map(mark=>({...mark})),pat:{...EDIT.pat},selIndex:EDIT.selN?EDIT.chart.indexOf(EDIT.selN):-1,nextMarkColor:EDIT.nextMarkColor}}
+function editorSnapshot(){return{chart:EDIT.chart.map(n=>({...n})),marks:EDIT.marks.map(mark=>({...mark})),pat:{...EDIT.pat},selIndex:EDIT.selN?EDIT.chart.indexOf(EDIT.selN):-1,selection:EDIT.selected.map(n=>EDIT.chart.indexOf(n)).filter(i=>i>=0),nextMarkColor:EDIT.nextMarkColor}}
 function rememberEditorChange(before){if(JSON.stringify(before)!==JSON.stringify(editorSnapshot())){EDIT.undo.push(before);if(EDIT.undo.length>100)EDIT.undo.shift()}}
 function undoEditorChange(){const before=EDIT.undo.pop();if(!before)return edMsg('Nothing to undo');
- EDIT.chart=before.chart;EDIT.marks=before.marks;EDIT.pat=before.pat;EDIT.selN=before.selIndex>=0?EDIT.chart[before.selIndex]||null:null;EDIT.nextMarkColor=before.nextMarkColor;edMsg('Last editor change undone')}
+ EDIT.chart=before.chart;EDIT.marks=before.marks;EDIT.pat=before.pat;EDIT.selN=before.selIndex>=0?EDIT.chart[before.selIndex]||null:null;EDIT.selected=(before.selection||[]).map(i=>EDIT.chart[i]).filter(Boolean);if(EDIT.selN&&!EDIT.selected.includes(EDIT.selN))EDIT.selected.push(EDIT.selN);EDIT.nextMarkColor=before.nextMarkColor;edMsg('Last editor change undone')}
 function tryPat(mut){const before=editorSnapshot();mut(EDIT.pat);const m=legalMsg(EDIT.pat);if(m){EDIT.pat=before.pat;edMsg(m)}else rememberEditorChange(before)}
 function sortChart(){EDIT.chart.sort((a,b)=>a.t-b.t)}
 function noteLabel(n){const o=[];if(n.ls>=0)o.push('L'+DIR8[n.ls]);if(n.dp>=0)o.push('D'+DIR8[n.dp]);if(n.lf&1)o.push('LB');if(n.lf&2)o.push('LT');
@@ -549,7 +611,52 @@ function noteLabel(n){const o=[];if(n.ls>=0)o.push('L'+DIR8[n.ls]);if(n.dp>=0)o.
 function zoom(k){EDIT.pps=Math.max(25,Math.min(800,EDIT.pps*k))}
 function seek(t){EDIT.t=Math.max(0,t);EDIT.audio.currentTime=EDIT.t}
 function nudge(d){if(!EDIT.audio.paused)EDIT.audio.pause();seek(EDIT.t+d)}
-function selectNote(n){EDIT.selN=n;if(n){EDIT.pat={ls:n.ls,dp:n.dp,lf:n.lf,rs:n.rs,fm:n.fm,rf:n.rf};edMsg('Selected '+fmtT(n.t)+'  '+noteLabel(n))}}
+function selectNote(n){EDIT.selN=n;EDIT.selected=n?[n]:[];if(n){EDIT.pat={ls:n.ls,dp:n.dp,lf:n.lf,rs:n.rs,fm:n.fm,rf:n.rf};edMsg('Selected '+fmtT(n.t)+'  '+noteLabel(n))}}
+function selectNotes(notes,primary){
+ EDIT.selected=Array.from(new Set(notes)).filter(n=>EDIT.chart.includes(n));
+ EDIT.selN=primary&&EDIT.selected.includes(primary)?primary:(EDIT.selected[0]||null);
+ if(EDIT.selN){EDIT.pat={ls:EDIT.selN.ls,dp:EDIT.selN.dp,lf:EDIT.selN.lf,rs:EDIT.selN.rs,fm:EDIT.selN.fm,rf:EDIT.selN.rf};edMsg(`Selected ${EDIT.selected.length} note${EDIT.selected.length===1?'':'s'}`)}
+ else edMsg('No notes selected')
+}
+function moveSelectedNotes(delta){
+ const notes=(EDIT.selected.length?EDIT.selected:(EDIT.selN?[EDIT.selN]:[])).filter(n=>!n.locked);
+ if(!notes.length)return edMsg('Select an unlocked note first');
+ const before=editorSnapshot();
+ notes.forEach(n=>{n.t=Math.max(0,Math.round((n.t+delta)*100)/100)});
+ sortChart();rememberEditorChange(before);edMsg(`Moved ${notes.length} note${notes.length===1?'':'s'}`)
+}
+function resizeSelectedNotes(delta){
+ const notes=(EDIT.selected.length?EDIT.selected:(EDIT.selN?[EDIT.selN]:[])).filter(n=>!n.locked);
+ if(!notes.length)return edMsg('Select an unlocked note first');
+ const before=editorSnapshot();
+ notes.forEach(n=>{n.sp=Math.max(.03,Math.min(1.5,(n.sp||.25)+delta))});
+ rememberEditorChange(before);edMsg(`Timing line adjusted for ${notes.length} note${notes.length===1?'':'s'}`)
+}
+function selectTimeRange(direction){
+ const notes=EDIT.chart.filter(n=>direction==='after'?n.t>=EDIT.t:n.t<=EDIT.t);
+ selectNotes(notes,notes[0]||null)
+}
+function copySelectedNotes(cut=false){
+ const notes=EDIT.selected.length?EDIT.selected:(EDIT.selN?[EDIT.selN]:[]);
+ if(!notes.length)return edMsg('Select notes to copy');
+ const start=Math.min(...notes.map(n=>n.t));
+ EDITOR_CLIPBOARD=notes.map(n=>({...n,offset:n.t-start}));
+ if(!cut)return edMsg(`Copied ${notes.length} note${notes.length===1?'':'s'}`);
+ const movable=notes.filter(n=>!n.locked);
+ if(!movable.length)return edMsg('Selected notes are locked; nothing was cut');
+ const before=editorSnapshot();
+ EDIT.chart=EDIT.chart.filter(n=>!movable.includes(n));
+ EDIT.selN=null;EDIT.selected=[];
+ rememberEditorChange(before);
+ edMsg(`Cut ${movable.length} note${movable.length===1?'':'s'}${movable.length<notes.length?'; locked notes were kept':''}`)
+}
+function pasteNotes(){
+ if(!EDITOR_CLIPBOARD.length)return edMsg('Nothing to paste');
+ const before=editorSnapshot(),base=Math.max(0,EDIT.t);
+ const pasted=EDITOR_CLIPBOARD.map(({offset,...note})=>({...note,t:Math.round((base+offset)*100)/100,locked:false}));
+ EDIT.chart.push(...pasted);sortChart();selectNotes(pasted,pasted[0]);rememberEditorChange(before);
+ edMsg(`Pasted ${pasted.length} note${pasted.length===1?'':'s'} at ${fmtT(base)}`)
+}
 function toggleNoteLock(){const n=EDIT.selN;if(!n)return edMsg('Select a note first');const before=editorSnapshot();
  n.locked=!n.locked;rememberEditorChange(before);edMsg(n.locked?'Selected note locked in place':'Selected note unlocked')}
 function selectNeighbor(d){const c=EDIT.chart;if(!c.length)return;let i=EDIT.selN?c.indexOf(EDIT.selN):-1;
@@ -561,7 +668,16 @@ function addNote(){const p=EDIT.pat;if(!hasInput(p))return edMsg('Choose inputs 
 function replaceNote(){const n=EDIT.selN;if(!n)return edMsg('Select a note first (click its block)');if(n.locked)return edMsg('Unlock this note before changing it');const p=EDIT.pat;
  if(!hasInput(p))return edMsg('Choose inputs first');const m=legalMsg(p);if(m)return edMsg(m);
  const before=editorSnapshot();Object.assign(n,{ls:p.ls,dp:p.dp,lf:p.lf,rs:p.rs,fm:p.fm,rf:p.rf});rememberEditorChange(before);edMsg('Note updated')}
-function deleteNote(){const i=EDIT.selN?EDIT.chart.indexOf(EDIT.selN):-1;if(i<0)return edMsg('Select a note first');if(EDIT.selN.locked)return edMsg('Unlock this note before deleting it');const before=editorSnapshot();EDIT.chart.splice(i,1);EDIT.selN=null;rememberEditorChange(before);edMsg('Note deleted')}
+function deleteNote(){
+ const selected=EDIT.selected.length?EDIT.selected:(EDIT.selN?[EDIT.selN]:[]);
+ if(!selected.length)return edMsg('Select a note first');
+ const deletable=selected.filter(n=>!n.locked);
+ if(!deletable.length)return edMsg('Unlock selected notes before deleting them');
+ const before=editorSnapshot();EDIT.chart=EDIT.chart.filter(n=>!deletable.includes(n));
+ EDIT.selected=selected.filter(n=>!deletable.includes(n));EDIT.selN=EDIT.selected[0]||null;
+ rememberEditorChange(before);
+ edMsg(`Deleted ${deletable.length} note${deletable.length===1?'':'s'}${deletable.length<selected.length?'; locked notes were kept':''}`)
+}
 function addMark(){const t=Math.round(EDIT.t*100)/100;if(EDIT.marks.some(mark=>mark.t===t))return edMsg('A timeline mark already exists here');
  const before=editorSnapshot();EDIT.marks.push({t,color:EDIT.nextMarkColor});EDIT.marks.sort((a,b)=>a.t-b.t);rememberEditorChange(before);edMsg('Timeline mark added at '+fmtT(t))}
 function changeNextMarkColor(){const before=editorSnapshot(),i=MARK_COLORS.indexOf(EDIT.nextMarkColor);EDIT.nextMarkColor=MARK_COLORS[(i+1)%MARK_COLORS.length];rememberEditorChange(before);edMsg('Next mark color changed')}
@@ -570,13 +686,40 @@ function removePreviousMark(){let i=-1;EDIT.marks.forEach((mark,index)=>{if(mark
 function clearMarks(){const count=EDIT.marks.length;if(!count)return edMsg('No timeline marks to clear');const before=editorSnapshot();EDIT.marks=[];rememberEditorChange(before);edMsg(`Cleared ${count} timeline mark${count===1?'':'s'}`)}
 function edPlay(){if(!EDIT)return;const a=EDIT.audio;if(a.paused){a.currentTime=EDIT.t;a.play().catch(()=>{})}else a.pause()}
 function recOf(e){e.rec.chart=e.chart.map(n=>[n.t,n.ls,n.dp,n.lf,n.rs,n.fm,n.rf,+n.sp.toFixed(3),!!n.locked]);e.rec.marks=e.marks.map(mark=>({...mark}));e.rec.updated=Date.now();return e.rec}
-async function edSave(){if(!EDIT)return;await putMap(recOf(EDIT));edMsg('Saved')}
-async function edExit(){const e=EDIT;if(!e)return;EDIT=null;st='menu';e.audio.pause();e.audio.removeAttribute('src');setVid(null);
- await putMap(recOf(e));SELM=e.rec.id;showOpts()}
+async function edSave(){if(!EDIT)return;try{await putMap(recOf(EDIT));edMsg('Saved')}catch(error){edMsg('Save failed: '+error.message)}}
+function chooseEditorVideo(){
+ if(!EDIT.rec.video)return edMsg('This map has no background video');
+ edMsg('Choose a replacement MP4 for this map background');
+ FVR.click()
+}
+async function replaceEditorVideo(file){
+ if(!EDIT)return;
+ EDIT.rec.video=file;EDIT.rec.videoOn=true;VIDON=true;setVid(URL.createObjectURL(file));
+ try{
+  await putMap(recOf(EDIT));
+  edMsg('Background video replaced and saved');
+ }catch(error){
+  edMsg('Video preview updated, but saving failed: '+error.message);
+ }
+}
+async function edExit(){
+ const e=EDIT;if(!e||e.closing)return;e.closing=true;
+ const record=recOf(e);let saved=false;EDIT=null;DRG=null;st='menu';e.audio.pause();
+ try{
+  await putMap(record);
+  SELM=e.rec.id;saved=true;
+ }catch(error){
+  show('maps',`<h1>COULD NOT SAVE MAP</h1><p>${esc(error.message)}</p>${B('maps','BACK TO MAPS',1,1)}`);
+ }finally{
+  e.audio.removeAttribute('src');e.audio.load();if(e.audioUrl)URL.revokeObjectURL(e.audioUrl);setVid(null);
+ }
+ if(saved)showOpts()
+}
 async function edOpen(id){const r=await getMap(id);if(!r)return;
  if(audio){audio.pause();audio.onended=null}CUST=null;
  const chart=r.chart.map(a=>({t:a[0],ls:a[1],dp:a[2],lf:a[3],rs:a[4],fm:a[5],rf:a[6],sp:a[7]??.25,locked:a[8]===true})).sort((a,b)=>a.t-b.t);
- EDIT={rec:r,chart,marks:normalizeMarks(r.marks),nextMarkColor:MARK_COLORS[0],undo:[],autoN:null,pat:{ls:-1,dp:-1,lf:0,rs:-1,fm:0,rf:0},selN:null,t:0,pps:120,audio:new Audio(URL.createObjectURL(r.audio)),pb:Array(16).fill(false),last:performance.now()};
+ const audioUrl=URL.createObjectURL(r.audio);
+ EDIT={rec:r,chart,marks:normalizeMarks(r.marks),nextMarkColor:MARK_COLORS[0],undo:[],autoN:null,pat:{ls:-1,dp:-1,lf:0,rs:-1,fm:0,rf:0},selN:null,selected:[],t:0,pps:120,audioUrl,audio:new Audio(audioUrl),pb:Array(16).fill(false),last:performance.now(),help:false};
  VIDON=r.videoOn!==false;setVid(r.video?URL.createObjectURL(r.video):null);
  st='edit';EDF=0;edMsg('Click a spot on the timeline to move the playhead. A = add note.');
  ov.style.display='none';mb.style.display='none'}
@@ -607,20 +750,22 @@ function vsetup(){const w=Math.round(innerWidth*devicePixelRatio),h=Math.round(i
  if(C.width!==w||C.height!==h){C.width=w;C.height=h}const S=Math.min(w/1920,h/1080);
  X.setTransform(1,0,0,1,0,0);X.clearRect(0,0,w,h);X.setTransform(S,0,0,S,(w-1920*S)/2,(h-1080*S)/2)}
 function edDraw(now){vsetup();const pps=EDIT.pps;
- X.fillStyle=blendHex(gameSettings.backgroundColor,'#000000',.88);X.fillRect(-3000,-3000,8000,8000);drawVid(gameSettings.videoOpacity/100);
- const g=X.createLinearGradient(0,0,0,1080);g.addColorStop(0,'rgba(0,40,28,.25)');g.addColorStop(1,'rgba(0,10,8,.85)');X.fillStyle=g;X.fillRect(0,0,1920,1080);
- X.globalAlpha=.35;X.fillStyle='#000';X.fillRect(0,146,1920,298);X.globalAlpha=1;
+ X.fillStyle=blendHex(gameSettings.backgroundColor,'#000000',.88);X.fillRect(-3000,-3000,8000,8000);drawVid(gameSettings.forceVideoBackground?1:gameSettings.videoOpacity/100);
+ if(!gameSettings.forceVideoBackground){
+  const g=X.createLinearGradient(0,0,0,1080);g.addColorStop(0,'rgba(0,40,28,.25)');g.addColorStop(1,'rgba(0,10,8,.85)');X.fillStyle=g;X.fillRect(0,0,1920,1080);
+  X.globalAlpha=.35;X.fillStyle='#000';X.fillRect(0,146,1920,298);X.globalAlpha=1;
+ }
  /* ruler */
  const steps=[.1,.25,.5,1,2,5,10,30,60],step=steps.find(s=>s*pps>=90)||60,t0=EDIT.t-960/pps,t1=EDIT.t+960/pps;
  X.font=FNT(15);X.textAlign='center';X.textBaseline='middle';
  for(let k=Math.ceil(t0/step);k*step<=t1;k++){const tm=+(k*step).toFixed(3),x=EX(tm);if(tm<0)continue;
   X.fillStyle='#0fffbb';X.fillRect(x-1,100,2,34);X.fillText(fmtT(tm),x,118)}
  /* notes: left timing handle and note block */
- EDIT.chart.forEach(n=>{const x=EX(n.t);if(x<-200||x>2120)return;const sel=n===EDIT.selN,auto=n===EDIT.autoN,locked=n.locked;
+ EDIT.chart.forEach(n=>{const x=EX(n.t);if(x<-200||x>2120)return;const sel=EDIT.selected.includes(n)||n===EDIT.selN,locked=n.locked;
   const lx=EX(n.t-n.sp);
   X.fillStyle='#000';X.shadowColor='#fff';X.shadowBlur=14;X.fillRect(lx-4,150,8,290);X.shadowBlur=0;
   X.fillStyle=sel?'#fff':'#0fffbb';X.fillRect(lx-10,140,20,20);
-  X.fillStyle=sel?'#fff':auto?'#58a6ff':'#0fffbb';X.shadowColor=auto?'#58a6ff':'#0fffbb';X.shadowBlur=sel||auto?30:12;rr(x-22,196,44,56,12);X.fill();X.shadowBlur=0;
+  X.fillStyle=sel?'#fff':'#0fffbb';X.shadowColor='#0fffbb';X.shadowBlur=sel?30:12;rr(x-22,196,44,56,12);X.fill();X.shadowBlur=0;
   X.fillStyle='#eafff8';X.font=FNT(14);X.fillText(noteLabel(n),x,176);
   if(locked){X.fillStyle='#fff';X.font=FNT(12);X.fillText('L',x+17,205)}});
  /* editor-only timeline marks */
@@ -633,20 +778,41 @@ function edDraw(now){vsetup();const pps=EDIT.pps;
  X.textAlign='left';X.fillStyle='#0fffbb';X.font=FNT(26);X.fillText('EDITOR · '+EDIT.rec.name,60,44);
  X.textAlign='right';X.font=FNT(20);X.fillStyle='#eafff8';X.fillText(`TIME ${fmtT(EDIT.t)}   NOTES ${EDIT.chart.length}   MARKS ${EDIT.marks.length}   ZOOM ${Math.round(pps)} px/s`,1860,44);
  X.fillStyle=EDIT.nextMarkColor;X.fillRect(60,58,18,18);X.textAlign='left';X.font=FNT(14);X.fillStyle='#eafff8';X.fillText('NEXT MARK · Alt+M changes color',86,71);
+ X.beginPath();X.arc(1860,82,22,0,Math.PI*2);X.fillStyle='rgba(3,26,19,.9)';X.fill();X.lineWidth=3;X.strokeStyle='#0fffbb';X.stroke();X.fillStyle='#0fffbb';X.font=FNT(22);X.textAlign='center';X.textBaseline='middle';X.fillText('i',1860,82);
  /* pattern preview */
  const pv=items(EDIT.pat);pv.forEach(o=>{o.y+=170;item(o)});
  if(!pv.length){X.font=FNT(26);X.fillStyle='#eafff8';X.textAlign='center';X.fillText('Choose inputs below, then ADD NOTE',960,640)}
  /* message + palette */
  if(EDMSG&&performance.now()-EDMT<4000){X.font=FNT(22);X.fillStyle='#fff7a8';X.textAlign='center';X.textBaseline='middle';X.fillText(EDMSG,960,800)}
  EDU=edUI();EDU.forEach((u,i)=>edDrawBtn(u,i===EDF));
- X.textAlign='left';X.font=FNT(13);X.fillStyle='#eafff8';X.globalAlpha=.6;
- X.fillText('Select a note before resizing its left handle · LOCK NOTE protects selection; unlock to move, resize, replace or delete · M / Select = mark · Ctrl+Z = undo',60,1028);
- X.fillText('Alt+M = mark color · Ctrl+M = remove previous mark · Shift+M = clear marks · Controller: left stick = scrub · D-pad = focus · A = press · LB/RB = prev/next · B = exit',60,1048);
- X.globalAlpha=1;
  X.fillStyle='rgba(0,0,0,.35)';X.fillRect(0,1066,1920,14);
- X.fillStyle='#fff';const d=EDIT.audio.duration||247;X.fillRect(0,1066,1920*Math.max(0,Math.min(1,EDIT.t/d)),14)}
+ X.fillStyle='#fff';const d=EDIT.audio.duration||247;X.fillRect(0,1066,1920*Math.max(0,Math.min(1,EDIT.t/d)),14);
+ if(EDIT.help){
+  X.fillStyle='rgba(0,0,0,.92)';rr(260,145,1400,790,24);X.fill();X.lineWidth=3;X.strokeStyle='#0fffbb';X.stroke();
+  X.textAlign='center';X.textBaseline='middle';X.fillStyle='#0fffbb';X.font=FNT(30);X.fillText('EDITOR SHORTCUTS',960,190);
+  const help=[
+   'D / Q  ·  Select next / previous note',
+   'E / A  ·  Move selected note(s) forward / backward',
+   'S / Z  ·  Move timing line away from / closer to note',
+   'Ctrl+R  ·  Choose a replacement background MP4',
+   'Shift + drag  ·  Select notes in a time range',
+   'Ctrl+A  ·  Select all notes',
+   'Shift+Ctrl+A  ·  Select from playhead to end',
+   'Ctrl+Alt+A  ·  Select from start to playhead',
+   'Ctrl+C / Ctrl+X / Ctrl+V  ·  Copy / cut / paste at playhead',
+   'Delete  ·  Delete selected note(s)     Ctrl+Z  ·  Undo',
+   'Space  ·  Play / pause     Arrow keys  ·  Scrub time',
+   '+ / -  ·  Zoom     M  ·  Add mark     Ctrl+M  ·  Remove previous mark',
+   'Alt+M  ·  Change mark color     Shift+M  ·  Clear marks',
+   'Controller: D-pad focus · A press · LB/RB previous/next · B exit',
+   'Click anywhere or press I / Escape to close this help'
+  ];
+  X.fillStyle='#eafff8';X.font=FNT(18);help.forEach((line,index)=>X.fillText(line,960,236+index*42));
+ }}
 function edLoop(now){const e=EDIT;if(!e)return;const dt=Math.min(.1,(now-e.last)/1000);e.last=now;const a=e.audio;
- if(!a.paused){e.t=a.currentTime;e.autoN=null;for(const n of e.chart){if(n.t>e.t)break;e.autoN=n}}
+ if(!a.paused)e.t=a.currentTime;
+ let next=null;for(const n of e.chart){if(n.t>e.t)break;next=n}
+ if(next!==e.autoN){e.autoN=next;if(next)selectNote(next)}
  const q=pad();
  if(q){const b=i=>!!(q.buttons&&q.buttons[i]&&q.buttons[i].pressed);
   const ax=q.axes&&Number.isFinite(q.axes[0])?q.axes[0]:0;
@@ -663,8 +829,11 @@ function edLoop(now){const e=EDIT;if(!e)return;const dt=Math.min(.1,(now-e.last)
  vidSync();edDraw(now)}
 function V(e){const d=devicePixelRatio,w=innerWidth*d,h=innerHeight*d,S=Math.min(w/1920,h/1080);return[(e.clientX*d-(w-1920*S)/2)/S,(e.clientY*d-(h-1080*S)/2)/S]}
 C.addEventListener('pointerdown',e=>{if(st!=='edit'||!EDIT)return;const[x,y]=V(e);
+ if(EDIT.help){EDIT.help=false;return}
+ if(x>=1835&&x<=1885&&y>=57&&y<=107){EDIT.help=true;return}
  const u=EDU.find(u=>x>=u.x&&x<=u.x+u.w&&y>=u.y&&y<=u.y+u.h);if(u){EDF=EDU.indexOf(u);u.fn();return}
  C.setPointerCapture(e.pointerId);
+ if(e.shiftKey&&y>=130&&y<=450){DRG={m:'select',x0:x,x1:x,base:EDIT.selected.slice(),before:editorSnapshot()};return}
  if(y>=130&&y<=450){
   for(const n of EDIT.chart)if(y>=150&&y<=440&&Math.abs(x-EX(n.t-n.sp))<9){
    if(n!==EDIT.selN)return edMsg('Select the note before resizing it');
@@ -676,21 +845,42 @@ C.addEventListener('pointerdown',e=>{if(st!=='edit'||!EDIT)return;const[x,y]=V(e
  DRG={m:'scrub',x0:x,t0:EDIT.t};if(!EDIT.audio.paused)EDIT.audio.pause()});
 C.addEventListener('pointermove',e=>{if(!DRG||st!=='edit'||!EDIT)return;const[x]=V(e);
  if(DRG.m==='scrub')EDIT.t=Math.max(0,DRG.t0-(x-DRG.x0)/EDIT.pps);
+ else if(DRG.m==='select'){
+  DRG.x1=x;const lo=Math.min(DRG.x0,x),hi=Math.max(DRG.x0,x),hits=EDIT.chart.filter(n=>{const nx=EX(n.t);return nx>=lo&&nx<=hi});
+  DRG.notes=Array.from(new Set([...DRG.base,...hits]));DRG.primary=hits[hits.length-1]||DRG.notes[DRG.notes.length-1]||null;
+  EDIT.selected=DRG.notes;EDIT.selN=DRG.primary;
+ }
  else if(DRG.m==='move'){DRG.n.t=Math.max(0,Math.round((TX(x)-DRG.off)*100)/100)}
  else if(DRG.m==='line'){DRG.n.sp=Math.max(.03,Math.min(1.5,Math.abs(TX(x)-DRG.n.t)))}});
-const endDrag=()=>{if(DRG&&DRG.m!=='scrub'&&EDIT){sortChart();rememberEditorChange(DRG.before)}DRG=null};
+const endDrag=()=>{if(DRG&&EDIT){
+ if(DRG.m==='select'){selectNotes(DRG.notes||DRG.base,DRG.primary||null)}
+ else if(DRG.m!=='scrub'){sortChart();rememberEditorChange(DRG.before)}
+ }DRG=null};
 C.addEventListener('pointerup',endDrag);C.addEventListener('pointercancel',endDrag);
 C.addEventListener('wheel',e=>{if(st!=='edit'||!EDIT)return;e.preventDefault();zoom(e.deltaY<0?1.15:1/1.15)},{passive:false});
 addEventListener('keydown',e=>{if(st!=='edit'||!EDIT)return;const k=e.key;
- if(k.toLowerCase()==='z'&&(e.ctrlKey||e.metaKey)){e.preventDefault();undoEditorChange()}
+ const key=k.toLowerCase(),mod=e.ctrlKey||e.metaKey;
+ if(EDIT.help){if(k==='Escape'||key==='i'){e.preventDefault();EDIT.help=false}return}
+ if(mod&&e.altKey&&key==='a'){e.preventDefault();selectTimeRange('before')}
+ else if(mod&&e.shiftKey&&key==='a'){e.preventDefault();selectTimeRange('after')}
+ else if(mod&&key==='a'){e.preventDefault();selectNotes(EDIT.chart,EDIT.chart[0]||null)}
+ else if(mod&&key==='c'){e.preventDefault();copySelectedNotes()}
+ else if(mod&&key==='x'){e.preventDefault();copySelectedNotes(true)}
+ else if(mod&&key==='v'){e.preventDefault();pasteNotes()}
+ else if(mod&&key==='r'){e.preventDefault();chooseEditorVideo()}
+ else if(mod&&key==='z'){e.preventDefault();undoEditorChange()}
  else if(k.toLowerCase()==='m'&&(e.ctrlKey||e.metaKey)){e.preventDefault();removePreviousMark()}
  else if(k.toLowerCase()==='m'&&e.altKey){e.preventDefault();changeNextMarkColor()}
  else if(k.toLowerCase()==='m'&&e.shiftKey){e.preventDefault();clearMarks()}
  else if(k.toLowerCase()==='m'){e.preventDefault();addMark()}
  else if(k===' '){e.preventDefault();edPlay()}
  else if(k==='Escape')edExit();
+ else if(key==='i'){e.preventDefault();EDIT.help=true}
+ else if(!mod&&!e.altKey&&key==='d')selectNeighbor(1);else if(!mod&&!e.altKey&&key==='q')selectNeighbor(-1);
+ else if(!mod&&!e.altKey&&key==='e')moveSelectedNotes(.05);else if(!mod&&!e.altKey&&key==='a')moveSelectedNotes(-.05);
+ else if(!mod&&!e.altKey&&key==='s')resizeSelectedNotes(.05);else if(!mod&&!e.altKey&&key==='z')resizeSelectedNotes(-.05);
  else if(k==='+'||k==='=')zoom(1.3);else if(k==='-')zoom(1/1.3);
  else if(k==='Delete'||k==='Backspace'){e.preventDefault();deleteNote()}
  else if(k==='Enter')addNote();
  else if(k==='ArrowLeft'||k==='ArrowRight'){e.preventDefault();nudge(k==='ArrowLeft'?-.05:.05)}
- else if((e.ctrlKey||e.metaKey)&&k==='s'){e.preventDefault();edSave()}});
+ else if(mod&&key==='s'){e.preventDefault();edSave()}});
