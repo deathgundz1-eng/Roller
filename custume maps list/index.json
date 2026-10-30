@@ -1,0 +1,30 @@
+{
+  "maps": [
+    {
+      "file": "steins_gate_simplified.json",
+      "name": "Steins Gate (Simplified)",
+      "notes": 106,
+      "difficulty": "Normal C"
+    },
+    {
+      "file": "iron_kid_spacetoon.json",
+      "name": "ironkid AR",
+      "notes": 134,
+      "difficulty": "Normal A"
+    },
+    
+    {
+      "file": "iron_kid_spacetoon(2).json",
+      "name": "ironkid AReasy",
+      "notes": 134,
+      "difficulty": "Normal B"
+    },
+     
+    {
+      "file": "weitamv.json",
+      "name": "Whatever It Takes",
+      "notes": 303,
+      "difficulty": "Hard C"
+    }
+  ]
+}
